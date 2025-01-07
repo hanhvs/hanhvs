@@ -20,4 +20,10 @@
 
 ### Skills? Sure, Here’s the List (But Don’t Ask Me to Enjoy Them):
 
-![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,java,maven,python,opencv,cs,docker,postman,git,mongo,express,nest,mysql,graphql,vscode,md,supabase,bots,gcp,postgres,prisma,kafka
+![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,java,maven,python,opencv,cs,docker,postman,git,mongo,express,nest,mysql,graphql,vscode,md,supabase,bots,gcp,postgres,prisma,kafka,nginx,redis,unity)
+
+---
+
+### Final Words:
+
+Code is a means to an end. If there’s an easier way to achieve the same result, let’s take it. Life’s too short to obsess over syntax.
