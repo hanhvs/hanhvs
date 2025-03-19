@@ -2,7 +2,7 @@
 <h3 align="center">Developer 🙃</h3>
 
 - ✨ **Selling Game Sources**:  
-  Offering server and Unity-based client sources for popular games like **Ninja School Online, Ngoc Rong Online, and Avatar**. Perfect for launching or enhancing your project.
+  I have some server and Unity-based client game sources available for sale. These include popular multi-platform games like **Ninja School Online, Ngoc Rong Online, and Avatar**. 
 
 - 🛠️ **Custom Development Services**:  
   I have a team that can code the product you need. Let us know what you’re looking for!
