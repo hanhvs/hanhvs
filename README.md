@@ -1,11 +1,8 @@
 <h1 align="center">Hi 👋, I'm [K]reyz</h1>
-<h3 align="center">Coding... Meh, Not My Thing 🙃</h3>
+<h3 align="center">Developer 🙃</h3>
 
 - ✨ **Selling Game Sources**:  
-  I have some server and Unity-based client game sources available for sale. These include popular multi-platform games like **Ninja School Online**, **Ngoc Rong Online**, and **Avatar**. Why code new stuff when you can sell what already works, right?
-
-- ☑️ **Why I Code?**:  
-  To get it done and move on. Honestly, I’d rather be anywhere else.
+  Offering server and Unity-based client sources for popular games like **Ninja School Online, Ngoc Rong Online, and Avatar**. Perfect for launching or enhancing your project.
 
 - 🛠️ **Custom Development Services**:  
   I have a team that can code the product you need. Let us know what you’re looking for!
@@ -18,12 +15,12 @@
 
 ---
 
-### Skills? Sure, Here’s the List (But Don’t Ask Me to Enjoy Them):
+### Skills:
 
 ![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,java,go,maven,python,opencv,cs,docker,postman,git,mongo,express,nest,mysql,graphql,vscode,md,supabase,bots,gcp,postgres,prisma,kafka,nginx,redis,unity)
 
 ---
 
-### Final Words:
+### Philosophy:
 
-Code is a means to an end. If there’s an easier way to achieve the same result, let’s take it. Life’s too short to obsess over syntax.
+Efficiency matters. Let’s focus on results and make every line of code count.
