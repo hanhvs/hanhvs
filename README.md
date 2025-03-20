@@ -17,7 +17,7 @@
 
 ### Skills:
 
-![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,java,go,maven,python,opencv,cs,docker,postman,git,mongo,express,nest,mysql,graphql,vscode,md,supabase,bots,gcp,postgres,prisma,kafka,nginx,redis,unity)
+![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,cs,java,go,python,maven,opencv,docker,postman,git,mongo,express,nest,mysql,graphql,md,supabase,bots,gcp,postgres,prisma,kafka,nginx,redis,unity)
 
 ---
 
