@@ -1,4 +1,4 @@
-<h1 align="center">Hi 👋, I'm [K]reyz</h1>
+<h1 align="center">Hi 👋, I'm Kreyz</h1>
 <h3 align="center">Developer 🙃</h3>
 
 - ✨ **Selling Game Sources**:  
