@@ -1,16 +1,24 @@
-## Hi there 👋
+<h1 align="center">Hey there 👋 I'm <strong>Hanh V.</strong></h1>
+<h3 align="center">Crafting code, sculpting ideas 🎨💻</h3>
 
-<!--
-**hanhvs/hanhvs** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+> 🌀 Turning lines into legends—code that plays.
 
-Here are some ideas to get you started:
+---
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+### 🎮 KGB Record
+
+- ✨ **Source Sales**: Original codebases for **Ninja School Online**, **Ngọc Rồng Online**, and **Avatar**.
+- 🛠️ **Tailor-Made Development**: Custom web, app, tool, or game features—built to spec.
+- 📬 **Let's Connect**: [@KGBRecord](https://github.com/KGBRecord)
+
+---
+
+### 🧠 Tech Stack
+
+![Skills](https://skillicons.dev/icons?i=nodejs,js,ts,cs,java,go,python,maven,opencv,docker,postman,git,mongo,express,nest,mysql,graphql,md,supabase,bots,gcp,postgres,prisma,kafka,nginx,redis,unity)
+
+---
+
+### ✨ Dev Philosophy
+
+Code is poetry when crafted with intention—optimize, beautify, and deliver.</file>
