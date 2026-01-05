@@ -2,7 +2,8 @@
 <h3 align="center">Crafting code, sculpting ideas 🎨💻</h3>
 
 > 🌀 Turning lines into legends—code that plays.
-
+> 
+> *Je croyais en la lumière, jusqu’à ce qu’elle me brûle.*
 ---
 
 ### ✨ Dev Philosophy
