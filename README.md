@@ -1,4 +1,4 @@
-<h1 align="center">Hey there 👋 I'm <strong>GEN Lieu</strong></h1>
+<h1 align="center">Hey there 👋 I'm <strong>КГБ Lieu</strong></h1>
 <h3 align="center">Crafting code, sculpting ideas 🎨💻</h3>
 
 > 🌀 Turning lines into legends—code that plays.
