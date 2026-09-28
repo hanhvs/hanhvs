@@ -6,13 +6,9 @@
 
 <sub><i>Je croyais en la lumière, jusqu'à ce qu'elle me brûle.</i></sub>
 
-<br><br>
-
 `19.5k+ commits` &nbsp;·&nbsp; `155+ PRs` &nbsp;·&nbsp; `135+ repos` &nbsp;·&nbsp; `7+ orgs`
 
 </div>
-
-<br>
 
 ## What I build with
 
@@ -34,8 +30,6 @@
 - **Data / ML** — pandas · scikit-learn · statsmodels · AutoGluon time-series · RFM/K-Means/association rules · DuckDB · Superset · Jupyter
 - **Infra** — Docker Compose · Nx monorepos · Prisma/TypeORM/Ent · Postgres · MySQL/MSSQL · Redis · RabbitMQ · Kafka · Qdrant · MinIO · AWS S3/Azure Blob · GitHub Actions/CI-CD · PM2 · TradingView CDP live-market automation
 - **Other** — Electron · Tauri · Unity/C# · Java ME · LibRetro/C · Chrome Extensions (MV3) · Power Apps PCF · Web3/ImmutableX/Ronin · OpenCV/pyautogui automation
-
-<br>
 
 ## Open source
 
