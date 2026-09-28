@@ -20,11 +20,7 @@
 
 <img src="https://skillicons.dev/icons?i=nestjs,fastapi,express,go,spring,nextjs,react,vite,angular,tailwind" />
 
-<br><br>
-
 <img src="https://skillicons.dev/icons?i=py,sklearn,docker,postgres,redis,rabbitmq,kafka,aws,githubactions,prisma" />
-
-<br><br>
 
 <img src="https://skillicons.dev/icons?i=electron,tauri,unity,cs,java,vscode" />
 
