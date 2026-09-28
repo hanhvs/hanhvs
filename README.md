@@ -41,8 +41,6 @@ Contributions and forks I actively maintain outside my own orgs:
 
 Also maintain an independent patch of **[9router](https://github.com/KGBRecord/9router)** — not merged upstream, lives in my own **[KGBRecord](https://github.com/KGBRecord)** org for anyone who wants to pull it directly.
 
-<br>
-
 ---
 
 <div align="center">
