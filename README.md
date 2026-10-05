@@ -6,7 +6,7 @@
 
 <sub><i>Je croyais en la lumière, jusqu'à ce qu'elle me brûle.</i></sub>
 
-`19.5k+ commits` &nbsp;·&nbsp; `155+ PRs` &nbsp;·&nbsp; `135+ repos` &nbsp;·&nbsp; `7+ orgs`
+`5.5k+ commits` &nbsp;·&nbsp; `155+ PRs` &nbsp;·&nbsp; `135+ repos` &nbsp;·&nbsp; `7+ orgs`
 
 </div>
 
