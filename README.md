@@ -2,44 +2,93 @@
 
 # КГБ Lieu
 
-<i>turning lines into legends — code that plays.</i>
+*turning lines into legends — code that plays.*
 
 <sub><i>Je croyais en la lumière, jusqu'à ce qu'elle me brûle.</i></sub>
 
-`19.5k+ commits` &nbsp;·&nbsp; `155+ PRs` &nbsp;·&nbsp; `135+ repos` &nbsp;·&nbsp; `7+ orgs`
+&nbsp;
 
-</div>
-
-## What I build with
-
-<div align="center">
-
-<img src="https://skillicons.dev/icons?i=nestjs,fastapi,express,go,spring,nextjs,react,vite,angular,tailwind" />
-
-<img src="https://skillicons.dev/icons?i=py,sklearn,docker,postgres,redis,rabbitmq,kafka,aws,githubactions,prisma" />
-
-<img src="https://skillicons.dev/icons?i=electron,tauri,unity,cs,java,vscode" />
+`19.5k+ commits` — `155+ pull requests` — `135+ repositories` — `7+ organizations`
 
 </div>
 
 <br>
 
-- **Backend** — NestJS · FastAPI · Express/Fastify · Go/Gin · Spring Boot · Passport (JWT/OAuth2/Entra ID/MSAL) — from a 10-service NFT marketplace to a 742-commit enterprise quotation engine.
-- **Frontend** — Next.js · React 19 · Vite · Angular · Ant Design · Fluent UI · Radix UI · Zustand · Redux-Saga · TanStack Query · reactflow · ECharts/chart.js · Storybook
-- **AI / Agents** — LangGraph · LangChain · RAG (Qdrant, FAISS, hybrid BM25+dense, multilingual/HyDE) · ZERO-SQL agentic BI · GEPA prompt optimization · causal inference (dowhy, causal-learn) · STM/LTM memory · Langfuse · RAGAS · Whisper · MCP
-- **Data / ML** — pandas · scikit-learn · statsmodels · AutoGluon time-series · RFM/K-Means/association rules · DuckDB · Superset · Jupyter
-- **Infra** — Docker Compose · Nx monorepos · Prisma/TypeORM/Ent · Postgres · MySQL/MSSQL · Redis · RabbitMQ · Kafka · Qdrant · MinIO · AWS S3/Azure Blob · GitHub Actions/CI-CD · PM2 · TradingView CDP live-market automation
-- **Other** — Electron · Tauri · Unity/C# · Java ME · LibRetro/C · Chrome Extensions (MV3) · Power Apps PCF · Web3/ImmutableX/Ronin · OpenCV/pyautogui automation
+---
 
-## Open source
+### I.
 
-Contributions and forks I actively maintain outside my own orgs:
+There is a particular silence that settles over a terminal at three in the morning,
+when the last test finally goes green and nobody else is awake to see it.
+I have lived most of my working life in that silence — building backends that
+don't fall over, interfaces that don't lie to the people using them, and agents
+that learn instead of merely repeating.
 
-- **[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)** — self-improving AI agent, learning loop, skills from experience.
-- **[t8y2/dbx](https://github.com/t8y2/dbx)** — database desktop tool, deployment via Docker Compose.
-- **[oblien/openship](https://github.com/oblien/openship)** — deployment platform.
+Code, to me, is not a means to an end. It is the end. A commit is a sentence;
+a pull request is a paragraph; a well-shaped service is a short story with a
+beginning, an architecture, and — if I did my job — no plot holes.
 
-Also maintain an independent patch of **[9router](https://github.com/KGBRecord/9router)** — not merged upstream, lives in my own **[KGBRecord](https://github.com/KGBRecord)** org for anyone who wants to pull it directly.
+---
+
+### II. What I reach for
+
+**On the server** — NestJS, FastAPI, Express, Fastify, Go with Gin, Spring Boot.
+Postgres, MySQL, MSSQL, Redis, RabbitMQ, Kafka, Qdrant, MinIO underneath. Prisma,
+TypeORM, and Ent to keep the data honest. Auth that actually belongs in the
+product — JWT, OAuth 2.0, Entra ID, MSAL, Passport — not bolted on as an
+afterthought.
+
+**On the screen** — Next.js, React 19, Vite, Angular. Tailwind, Ant Design,
+Fluent UI, Radix UI for the look; Zustand, Redux-Saga, TanStack Query for the
+memory; React Flow, ECharts, Chart.js, Storybook for the parts that need to be
+seen and understood at a glance.
+
+**In the mind of the machine** — LangGraph, LangChain, MCP, Langfuse, RAGAS.
+Retrieval built properly: Qdrant and FAISS, hybrid BM25 plus dense search,
+multilingual embeddings, HyDE, short-term and long-term memory that
+persists across a conversation instead of forgetting it. ZERO-SQL agentic BI.
+GEPA prompt optimization. Whisper for the things people say out loud. DoWhy
+and causal-learn for the questions correlation can't answer.
+
+**In the data** — pandas, scikit-learn, statsmodels, AutoGluon for the future,
+DuckDB and Superset for the present, Jupyter for the thinking in between. RFM,
+K-Means, association rules — the quiet arithmetic behind decisions that look
+intuitive from the outside.
+
+**Everywhere else** — Docker Compose and Nx holding the pieces together,
+GitHub Actions shipping them, AWS S3 and Azure Blob storing what needs storing,
+PM2 keeping it alive, and TradingView CDP automation watching markets that
+never sleep.
+
+**And because not everything has to be serious** — Electron, Tauri, Unity and
+C#, Java ME, LibRetro in raw C, Chrome extensions built on Manifest V3, Power
+Apps PCF components, a little Web3 through ImmutableX and Ronin, and OpenCV
+paired with pyautogui for the automations that make a computer feel less like
+a chore and more like a collaborator.
+
+---
+
+### III. Open source
+
+Contributions and forks I keep alive outside my own orgs, because good tools
+deserve maintenance even when they're not mine to begin with:
+
+**[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)**
+— a self-improving agent, a learning loop, skills accumulated the way a person
+accumulates them: through experience, not instruction.
+
+**[t8y2/dbx](https://github.com/t8y2/dbx)**
+— a desktop database tool, with deployment work through Docker Compose so it
+runs the same everywhere it's asked to.
+
+**[oblien/openship](https://github.com/oblien/openship)**
+— a deployment platform for the moment code is ready to stop being a project
+and start being a product.
+
+And a patch of **[9router](https://github.com/KGBRecord/9router)** that never
+made it upstream — not because it was rejected, but because it deserved its
+own home. It lives in **[KGBRecord](https://github.com/KGBRecord)**, unlocked,
+for anyone who wants to pull it directly instead of waiting for permission.
 
 ---
 

@@ -1,0 +1,1458 @@
+<!doctype html>
+<html lang="en"><head><script data-od-srcdoc-transport-activation>(function(){
+  var generation = "";
+  var bodyComplete = false;
+  function containsCompletionMarker(node){
+    if (!node || node.nodeType !== 1) return false;
+    if (node.tagName === 'TEMPLATE' && node.getAttribute('data-od-srcdoc-transport-body-complete') === generation) return true;
+    var candidates = node.querySelectorAll ? node.querySelectorAll('template[data-od-srcdoc-transport-body-complete]') : [];
+    for (var i = 0; i < candidates.length; i += 1) {
+      if (candidates[i].getAttribute('data-od-srcdoc-transport-body-complete') === generation) return true;
+    }
+    return false;
+  }
+  var completionObserver = typeof MutationObserver === 'function' ? new MutationObserver(function(records){
+    if (bodyComplete) return;
+    for (var i = 0; i < records.length; i += 1) {
+      var added = records[i].addedNodes || [];
+      for (var j = 0; j < added.length; j += 1) {
+        if (!containsCompletionMarker(added[j])) continue;
+        bodyComplete = true;
+        completionObserver.disconnect();
+        return;
+      }
+    }
+  }) : null;
+  if (completionObserver && document.documentElement) {
+    completionObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  function announceReady(probeId){
+    if (!generation) return;
+    try {
+      if (window.parent && window.parent !== window) {
+        var message = { type: 'od:srcdoc-transport-activated', generation: generation };
+        if (typeof probeId === 'string' && probeId) message.probeId = probeId;
+        message.bodyComplete = bodyComplete;
+        message.documentReadyState = document.readyState;
+        message.bodyPresent = !!document.body;
+        message.bodyChildCount = document.body ? document.body.children.length : 0;
+        message.documentElementChildCount = document.documentElement ? document.documentElement.children.length : 0;
+        window.parent.postMessage(message, '*');
+      }
+    } catch (_) { /* sandboxed parent */ }
+  }
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (data && data.type === 'od:srcdoc-transport-ready-probe') {
+      if (data.generation === generation) announceReady(data.probeId);
+      return;
+    }
+    if (!data || data.type !== 'od:srcdoc-transport-activate' || typeof data.html !== 'string' || typeof data.generation !== 'string' || !data.generation) return;
+    // document.open/write keeps the current Window realm. Re-running an
+    // authored classic script there can fail before execution when it declares
+    // a top-level let/const that the previous document already declared. Ask
+    // the host to remount the shared bootstrap so this generation gets a fresh
+    // realm, then let the one-shot shell perform the initial write.
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'od:srcdoc-transport-reset-required',
+          generation: data.generation
+        }, '*');
+      }
+    } catch (_) { /* sandboxed parent — host recovery will remount on timeout */ }
+  });
+  announceReady();
+})();</script><script data-od-preview-redirect-guard>(function(){
+  var NAME_PREFIX = '__odRedirectGuard=';
+  var MAX_HOPS = 15;
+  var WINDOW_MS = 4000;
+  var SELF_MIN_DELAY_MS = 2000;
+  var MESSAGE_TYPE = "od:redirect-loop-blocked";
+  var BLOCK_LOAD_TIME_SCRIPT_REDIRECT = false;
+  function nowMs(){ try { return Date.now(); } catch (_) { return 0; } }
+  function readState(){
+    try {
+      var raw = window.name;
+      if (typeof raw === 'string' && raw.indexOf(NAME_PREFIX) === 0) {
+        var parsed = JSON.parse(raw.slice(NAME_PREFIX.length));
+        if (parsed && typeof parsed.hops === 'number' && typeof parsed.windowStart === 'number') return parsed;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function writeState(state){
+    try { window.name = NAME_PREFIX + JSON.stringify({ hops: state.hops, windowStart: state.windowStart }); } catch (_) {}
+  }
+  function clearState(){
+    try { if (typeof window.name === 'string' && window.name.indexOf(NAME_PREFIX) === 0) window.name = ''; } catch (_) {}
+  }
+  function nextState(){
+    var t = nowMs();
+    var prev = readState();
+    var withinWindow = prev && (t - prev.windowStart) <= WINDOW_MS;
+    return { hops: (withinWindow ? prev.hops : 0) + 1, windowStart: withinWindow ? prev.windowStart : t };
+  }
+  function scheduleCandidateReset(state){
+    try {
+      if (typeof setTimeout !== 'function') return;
+      setTimeout(function(){
+        try {
+          var current = readState();
+          if (current && current.hops === state.hops && current.windowStart === state.windowStart) clearState();
+        } catch (_) {}
+      }, WINDOW_MS + 1);
+    } catch (_) {}
+  }
+  function recordScriptRedirectCandidate(){
+    if (!BLOCK_LOAD_TIME_SCRIPT_REDIRECT) return;
+    var state = nextState();
+    if (state.hops > MAX_HOPS) {
+      clearState();
+      report(state.hops);
+      return;
+    }
+    writeState(state);
+    scheduleCandidateReset(state);
+  }
+  function metaRefreshes(){
+    var out = [];
+    try {
+      var metas = document.getElementsByTagName('meta');
+      for (var i = 0; i < metas.length; i++) {
+        var equiv = metas[i].getAttribute ? metas[i].getAttribute('http-equiv') : null;
+        if (equiv && String(equiv).toLowerCase() === 'refresh') out.push(metas[i]);
+      }
+    } catch (_) {}
+    return out;
+  }
+  function parseContent(meta){
+    var content = '';
+    try { content = String(meta.getAttribute('content') || ''); } catch (_) {}
+    var delayMatch = content.match(/^\s*([0-9]+(?:\.[0-9]+)?)/);
+    var delayMs = delayMatch ? Math.round(parseFloat(delayMatch[1]) * 1000) : 0;
+    var urlMatch = content.match(/[;,]\s*url\s*=\s*['"]?\s*([^'"\s]+)/i);
+    return { delayMs: delayMs, url: urlMatch ? urlMatch[1] : '' };
+  }
+  function currentArtifactHref(){
+    try {
+      var href = String(location.href || '');
+      if (href === 'about:srcdoc') {
+        return String(document.baseURI || href);
+      }
+      return href;
+    } catch (_) {
+      return '';
+    }
+  }
+  function isSelfTarget(url){
+    if (!url) return true; // no url => refresh the current document
+    try {
+      var base = (document.baseURI) || location.href;
+      return new URL(url, base).href === currentArtifactHref();
+    } catch (_) { return false; }
+  }
+  function isFastSrcdocUrlHop(parsed){
+    if (!parsed.url || parsed.delayMs > SELF_MIN_DELAY_MS) return false;
+    try { return String(location.href || '') === 'about:srcdoc'; } catch (_) { return false; }
+  }
+  function neutralize(metas){
+    for (var i = 0; i < metas.length; i++) {
+      try { metas[i].parentNode && metas[i].parentNode.removeChild(metas[i]); } catch (_) {}
+    }
+    try { if (window.stop) window.stop(); } catch (_) {}
+  }
+  function report(hops){
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: MESSAGE_TYPE, hops: hops }, '*');
+      }
+    } catch (_) {}
+  }
+  function evaluate(){
+    var metas = metaRefreshes();
+    if (!metas.length) {
+      // No refresh directive: this document breaks any accumulating chain.
+      if (!BLOCK_LOAD_TIME_SCRIPT_REDIRECT) clearState();
+      return;
+    }
+    var selfLoop = false;
+    for (var i = 0; i < metas.length; i++) {
+      var parsed = parseContent(metas[i]);
+      if (parsed.delayMs <= SELF_MIN_DELAY_MS && isSelfTarget(parsed.url)) { selfLoop = true; break; }
+      if (isFastSrcdocUrlHop(parsed)) { selfLoop = true; break; }
+    }
+    var state = nextState();
+    if (selfLoop || state.hops > MAX_HOPS) {
+      neutralize(metas);
+      clearState();
+      report(state.hops);
+      return;
+    }
+    writeState(state);
+  }
+  recordScriptRedirectCandidate();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', evaluate);
+  } else {
+    evaluate();
+  }
+})();</script><script data-od-sandbox-shim>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+  // A <base href> pointing at the artifact's real /raw/ URL (injectBaseHref,
+  // below) is what lets relative asset paths resolve inside this opaque
+  // srcDoc document. That same base is what breaks history.pushState /
+  // replaceState: a bare-hash call like replaceState(null, '', '#/3') — the
+  // exact pattern generated decks use for their own slide routing — resolves
+  // against the <base> into a real http(s) URL, and the browser throws
+  // SecurityError because the DOCUMENT's own origin is the opaque "null" of
+  // about:srcdoc, which can never match a concrete origin. A deck whose own
+  // navigation function calls replaceState before it finishes updating the
+  // slide DOM (ordering varies by generated template) aborts mid-navigation
+  // on that throw, leaving the main canvas blank until a manual reload —
+  // the thumbnail rail is unaffected because it does not run the deck's
+  // script per-thumbnail. Wrap both methods so that failure degrades to a
+  // no-op instead of interrupting the caller: the iframe's address bar was
+  // never visible to the user anyway, so losing the hash update here is
+  // invisible.
+  function shimHistoryMethod(name){
+    try {
+      var h = window.history;
+      var original = h && h[name];
+      if (typeof original !== 'function') return;
+      h[name] = function(state, title, url){
+        try {
+          return original.call(h, state, title, url);
+        } catch (_) {
+          return undefined;
+        }
+      };
+    } catch (_) {}
+  }
+  shimHistoryMethod('pushState');
+  shimHistoryMethod('replaceState');
+  document.addEventListener('click', (e) => {
+    if (!e.target || !(e.target instanceof Element)) return;
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (href === null) return;
+    var isAnchor = href.startsWith('#') || href === '';
+    if (isAnchor) {
+      e.preventDefault();
+      if (href === '' || href === '#') {
+        window.scrollTo({ top: 0 });
+        history.replaceState(null, '', ' ');
+      } else {
+        var targetId = href.slice(1);
+        var target = targetId ? document.getElementById(targetId) : null;
+        if (target) {
+          target.scrollIntoView();
+          location.hash === href && history.replaceState(null, '', ' ');
+          location.hash = href;
+        }
+      }
+    } else if (link.getAttribute('target') === '_blank') {
+      e.preventDefault();
+      let safe = false;
+      try {
+        var url = new URL(href, location.href);
+        safe =
+          url.protocol === 'http:' ||
+          url.protocol === 'https:' ||
+          url.protocol === 'mailto:';
+      } catch (_) {}
+      safe && window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  });
+})();</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hanh Vuong Sy — Generative Systems</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap');
+:root{
+  --bg:#fafafa;
+  --surface:#f2f2f2;
+  --ink:#111111;
+  --muted:#707070;
+  --line:rgba(0,0,0,.12);
+  --accent:#111111;
+  --glass:rgba(250,250,250,.82);
+  --glass-solid:rgba(250,250,250,.96);
+  --hover-bg:rgba(0,0,0,.04);
+  --sub-line:rgba(0,0,0,.08);
+  --fade-rgb:250,250,250;
+  --ink-rgb:17,17,17;
+  --line-rgb:0,0,0;
+  --particle-rgb:0,0,0;
+  --hero-rgb:0,0,0;
+  --cursor-ring-bg:rgba(0,0,0,.08);
+  --cursor-ring-bd:rgba(0,0,0,.6);
+  --display:"Syne","Helvetica Neue",sans-serif;
+  --body:"Space Grotesk",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+[data-theme="dark"]{
+  --bg:#000000;
+  --surface:#0a0a0a;
+  --ink:#ffffff;
+  --muted:#888888;
+  --line:rgba(255,255,255,.12);
+  --accent:#ffffff;
+  --glass:rgba(0,0,0,.78);
+  --glass-solid:rgba(0,0,0,.96);
+  --hover-bg:rgba(255,255,255,.04);
+  --sub-line:rgba(255,255,255,.08);
+  --fade-rgb:0,0,0;
+  --ink-rgb:255,255,255;
+  --line-rgb:255,255,255;
+  --particle-rgb:255,255,255;
+  --hero-rgb:255,255,255;
+  --cursor-ring-bg:rgba(255,255,255,.08);
+  --cursor-ring-bd:rgba(255,255,255,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow-x:hidden;cursor:none}
+a{color:inherit;text-decoration:none}a:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+::selection{background:var(--ink);color:var(--bg)}
+
+/* custom cursor */
+.cursor{position:fixed;width:12px;height:12px;background:var(--ink);border-radius:50%;pointer-events:none;z-index:9999;mix-blend-mode:difference;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;will-change:transform}
+.cursor.hover{width:44px;height:44px;background:var(--cursor-ring-bg);border:1px solid var(--cursor-ring-bd);mix-blend-mode:normal}
+
+/* generative canvas bg */
+#gen-canvas{position:fixed;inset:0;z-index:-1;width:100%;height:100%}
+.noise{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* layout */
+.app{display:flex;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;height:100vh;width:320px;padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--line);z-index:10;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.topbar{display:none}
+.main{flex:1;margin-left:320px;min-height:100vh}
+.section{min-height:100vh;padding:96px 80px;display:flex;flex-direction:column;justify-content:center;position:relative;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:0}
+
+/* sidebar */
+.brand{font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:-.05em;line-height:1}
+.brand span{display:block;font-size:11px;font-family:var(--mono);font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.nav-vertical{display:flex;flex-direction:column;gap:18px;margin-top:auto;margin-bottom:auto}
+.nav-vertical a{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);transition:color .25s;padding-left:0;position:relative}
+.nav-vertical a:before{content:"";position:absolute;left:-20px;top:50%;width:10px;height:1px;background:var(--ink);transform:translateY(-50%) scaleX(0);transform-origin:left;transition:transform .25s}
+.nav-vertical a:hover,.nav-vertical a.active{color:var(--ink)}
+.nav-vertical a.active:before{transform:translateY(-50%) scaleX(1)}
+.sidebar-bottom{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.sidebar-bottom a{display:block;margin-top:6px;color:var(--ink)}
+.theme-toggle{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:999px;padding:9px 16px;cursor:pointer;transition:.25s}
+.theme-toggle:hover{color:var(--ink);border-color:var(--ink)}
+
+/* hero */
+.hero-canvas{position:absolute;inset:0;z-index:-1}
+.hero .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:32px}
+.hero h1{font-family:var(--display);font-size:clamp(78px,11vw,170px);font-weight:800;letter-spacing:-.065em;line-height:.92;max-width:12ch}
+.hero h1 em{font-style:normal;color:transparent;-webkit-text-stroke:1.5px var(--ink);text-shadow:0 0 40px rgba(var(--ink-rgb),.10)}
+.hero p{font-size:18px;line-height:1.6;color:var(--muted);max-width:46ch;margin-top:48px}
+.hero-meta{display:flex;gap:48px;margin-top:64px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hero-meta span{color:var(--ink)}
+.scroll-hint{position:absolute;bottom:40px;left:80px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:12px}
+.scroll-hint:after{content:"";width:60px;height:1px;background:linear-gradient(90deg,var(--ink),transparent);animation:scan 2.4s ease-in-out infinite}
+@keyframes scan{0%,100%{transform:scaleX(0);transform-origin:left}50%{transform:scaleX(1);transform-origin:left}51%{transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+
+/* domain accordion */
+.section-title{font-family:var(--display);font-size:clamp(48px,6vw,96px);font-weight:700;letter-spacing:-.05em;line-height:1;margin-bottom:64px;max-width:14ch}
+.accordion{display:flex;flex-direction:column;gap:0}
+.accordion-item{border-top:1px solid var(--line);overflow:hidden}
+.accordion-item:last-child{border-bottom:1px solid var(--line)}
+.accordion-head{display:flex;align-items:center;justify-content:space-between;padding:42px 0;cursor:pointer;transition:color .3s}
+.accordion-head:hover{color:var(--muted)}
+.accordion-head h3{font-family:var(--display);font-size:clamp(28px,3.2vw,54px);font-weight:600;letter-spacing:-.04em;line-height:1}
+.accordion-index{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.1em;min-width:80px}
+.accordion-toggle{width:48px;height:48px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;position:relative;transition:.3s;flex-shrink:0}
+.accordion-toggle:before{content:"";width:16px;height:1px;background:var(--ink);transition:.3s}
+.accordion-toggle:after{content:"";position:absolute;width:1px;height:16px;background:var(--ink);transition:.3s}
+.accordion-item.open .accordion-toggle{transform:rotate(45deg);border-color:var(--ink)}
+.accordion-item.open .accordion-toggle:before,.accordion-item.open .accordion-toggle:after{background:var(--ink)}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .8s cubic-bezier(.16,1,.3,1),padding .8s cubic-bezier(.16,1,.3,1)}
+.accordion-item.open .accordion-body{max-height:900px;padding-bottom:48px}
+.accordion-body p{font-size:17px;line-height:1.7;color:var(--muted);max-width:74ch}
+.accordion-body p+p{margin-top:18px}
+.accordion-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.accordion-tags span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+
+/* capabilities floating list */
+.cap-list{display:flex;flex-direction:column;gap:0;margin-top:40px}
+.cap-row{display:flex;align-items:center;gap:24px;padding:28px 0;border-bottom:1px solid var(--line);font-size:18px;transition:transform .3s,color .3s;cursor:pointer}
+.cap-row:hover{color:var(--muted);transform:translateX(12px)}
+.cap-row:before{content:attr(data-num);font-family:var(--mono);font-size:12px;color:var(--muted);min-width:60px}
+.cap-row strong{font-weight:500;font-size:clamp(20px,2.2vw,34px);letter-spacing:-.02em}
+.cap-row p{font-size:15px;color:var(--muted);line-height:1.55;max-width:60ch;margin-top:8px}
+
+/* contact */
+.contact-section{justify-content:flex-end;padding-bottom:120px}
+.contact-title{font-family:var(--display);font-size:clamp(36px,4.5vw,72px);font-weight:700;letter-spacing:-.04em;line-height:1.1;max-width:18ch;margin-bottom:48px}
+.email-link{font-family:var(--display);font-size:clamp(24px,3vw,48px);font-weight:600;letter-spacing:-.03em;color:var(--ink);display:inline-block;margin-bottom:80px;position:relative}
+.email-link:after{content:"";position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--ink);transition:width .4s}
+.email-link:hover:after{width:100%}
+.contact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;font-size:14px;color:var(--muted);line-height:1.7}
+.contact-grid a{display:block;color:var(--ink);margin-top:6px;font-size:15px}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(48px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.stagger-1{transition-delay:.08s}.stagger-2{transition-delay:.16s}.stagger-3{transition-delay:.24s}.stagger-4{transition-delay:.32s}
+
+/* stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat-card{padding:36px;border:1px solid var(--line);border-radius:2px;transition:background .25s}
+.stat-card:hover{background:var(--hover-bg)}
+.stat-number{font-family:var(--display);font-size:clamp(42px,5vw,84px);font-weight:700;letter-spacing:-.05em;line-height:1;display:block}
+.stat-label{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-top:10px}
+.stat-note{font-size:14px;color:var(--muted);margin-top:8px;display:block;line-height:1.5}
+
+/* stack */
+.stack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.stack-group{padding:40px 36px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:background .25s}
+.stack-group:nth-child(3n){border-right:0}
+.stack-group:hover{background:var(--hover-bg)}
+.stack-index{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:18px}
+.stack-group h3{font-family:var(--display);font-size:clamp(22px,2vw,32px);font-weight:600;letter-spacing:-.03em;margin-bottom:16px}
+.stack-group p{font-size:15px;line-height:1.65;color:var(--muted);max-width:36ch}
+
+/* evidence */
+.evidence-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:40px}
+.evidence-card{padding:48px;border:1px solid var(--line);border-radius:2px;transition:background .25s}
+.evidence-card:hover{background:var(--hover-bg)}
+.evidence-kicker{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:20px}
+.evidence-card h3{font-family:var(--display);font-size:clamp(24px,2.4vw,40px);font-weight:600;letter-spacing:-.03em;line-height:1.1;margin-bottom:18px;max-width:20ch}
+.evidence-card p{font-size:16px;line-height:1.7;color:var(--muted);max-width:52ch}
+
+/* responsive */
+@media(max-width:1080px){
+  body{cursor:auto}
+  .cursor{display:none}
+  .sidebar{display:none}
+  .topbar{display:flex;position:fixed;top:0;left:0;right:0;height:72px;padding:0 28px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);z-index:100;background:var(--glass-solid);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .topbar-brand{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.04em}
+.topbar-brand span{font-family:var(--mono);font-size:10px;font-weight:400;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-left:10px}
+.topbar-actions{display:flex;align-items:center;gap:10px}
+.menu-toggle{width:44px;height:44px;display:grid;place-items:center;gap:6px;background:transparent;border:1px solid var(--line);border-radius:50%;cursor:pointer;flex-direction:column}
+  .menu-toggle span{display:block;width:18px;height:1px;background:var(--ink);transition:.25s}
+  .topbar.menu-open .menu-toggle span:first-child{transform:translateY(3.5px) rotate(45deg)}
+  .topbar.menu-open .menu-toggle span:last-child{transform:translateY(-3.5px) rotate(-45deg)}
+  .topbar-nav{position:fixed;top:72px;left:0;right:0;display:flex;flex-direction:column;gap:0;background:var(--glass-solid);border-bottom:1px solid var(--line);padding:12px 28px;transform:translateY(-120%);opacity:0;pointer-events:none;transition:transform .35s cubic-bezier(.16,1,.3,1),opacity .25s}
+  .topbar.menu-open .topbar-nav{transform:translateY(0);opacity:1;pointer-events:auto}
+  .topbar-nav a{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:16px 0;border-bottom:1px solid var(--sub-line);transition:color .25s}
+  .topbar-nav a:last-child{border-bottom:0}
+  .topbar-nav a:hover,.topbar-nav a.active{color:var(--ink)}
+  .main{margin-left:0;padding-top:72px}
+  .section{padding:80px 40px;min-height:auto}
+  .hero{min-height:calc(100vh - 72px)}
+  .scroll-hint{left:40px;bottom:32px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stack-group{border-right:0}
+  .stack-grid{grid-template-columns:1fr}
+  .evidence-grid{grid-template-columns:1fr}
+  .section-title{margin-bottom:48px}
+}
+@media(max-width:720px){
+  .topbar{height:64px;padding:0 20px}
+  .topbar-brand span{display:none}
+  .topbar-nav{top:64px;padding:8px 20px}
+  .main{padding-top:64px}
+  .section{padding:64px 24px 80px}
+  .hero{min-height:calc(100vh - 64px);padding-top:64px}
+  .hero h1{font-size:clamp(52px,15vw,96px);letter-spacing:-.055em}
+  .hero p{font-size:16px;margin-top:32px}
+  .hero-meta{flex-direction:column;gap:14px;margin-top:40px}
+  .section-title{font-size:42px;margin-bottom:36px}
+  .accordion-head{padding:28px 0;gap:16px}
+  .accordion-head h3{font-size:26px}
+  .accordion-index{display:none}
+  .accordion-toggle{width:40px;height:40px}
+  .accordion-toggle:before{width:14px}
+  .accordion-toggle:after{height:14px}
+  .accordion-item.open .accordion-body{padding-bottom:32px}
+  .accordion-body p{font-size:16px;line-height:1.65}
+  .accordion-tags{margin-top:22px}
+  .accordion-tags span{font-size:10px;padding:6px 10px}
+  .stats-grid{grid-template-columns:1fr}
+  .stat-card{padding:28px}
+  .cap-row{flex-direction:column;align-items:flex-start;gap:10px;padding:24px 0}
+  .cap-row:before{min-width:auto}
+  .cap-row strong{font-size:24px}
+  .cap-row p{font-size:14px}
+  .contact-grid{grid-template-columns:1fr}
+  .email-link{margin-bottom:48px}
+  .evidence-card{padding:32px}
+  .stack-group{padding:28px 24px}
+  .scroll-hint{left:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+<style data-od-tweaks-bridge-style>
+[data-od-tweaks-hidden] .tw-panel {
+  transform: translateX(calc(100% + 32px)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.tw-restore { display: none !important; }
+</style><script data-od-tweaks-bridge>(function(){
+  // Synchronously hide BEFORE the artifact body parses so the panel never
+  // flashes on initial paint. The host removes the attribute via postMessage
+  // once it knows the desired state.
+  document.documentElement.setAttribute('data-od-tweaks-hidden', '');
+
+  var suppressEcho = false;
+  var observer = null;
+
+  function panelEl(){ return document.querySelector('.tw-panel'); }
+
+  function applyClassesToPanel(visible){
+    var panel = panelEl();
+    if (panel) panel.classList.toggle('tw-hidden', !visible);
+  }
+
+  function setPanelVisible(visible){
+    suppressEcho = true;
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !visible);
+    applyClassesToPanel(visible);
+    // Clear flag after the MutationObserver has had a chance to fire for this
+    // change so we don't echo our own host-driven toggles back to the host.
+    Promise.resolve().then(function(){ suppressEcho = false; });
+  }
+
+  function postState(){
+    var panel = panelEl();
+    if (!panel) return;
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-panel-state',
+        visible: !panel.classList.contains('tw-hidden'),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function postAvailability(){
+    try {
+      parent.postMessage({
+        type: 'od:tweaks-available',
+        available: !!panelEl(),
+      }, '*');
+    } catch (e) {}
+  }
+
+  function attachObserver(){
+    var panel = panelEl();
+    if (!panel || observer) return;
+    observer = new MutationObserver(function(){
+      if (suppressEcho) return;
+      postState();
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  function onReady(){
+    // Capture the panel authored visibility BEFORE we apply the host hidden
+    // attribute. The bridge sets data-od-tweaks-hidden synchronously in head
+    // (before the body parses), so on entry to onReady the attribute is
+    // always present even though the artifact may have authored the panel
+    // as default-visible. Reading the panel class first is the only place
+    // we can still observe the author intent. Then drive the attribute,
+    // classes, and posted state from that captured value so a default
+    // visible tw-panel reports visible:true and the toolbar toggle starts
+    // ON. Issue surfaced in PR #1643 review.
+    var panel = panelEl();
+    var initialVisible = !!panel && !panel.classList.contains('tw-hidden');
+    document.documentElement.toggleAttribute('data-od-tweaks-hidden', !initialVisible);
+    applyClassesToPanel(initialVisible);
+    attachObserver();
+    postAvailability();
+    // Post the captured initial visibility so the toolbar toggle reflects
+    // the default state on mount. Without this the toggle reads OFF while
+    // a default-visible tw-panel artifact clearly shows its panel and the
+    // user would have to click toggle-on then toggle-off to actually hide.
+    postState();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+
+  window.addEventListener('message', function(ev){
+    if (!ev.data || ev.data.type !== 'od:tweaks-panel-visible') return;
+    setPanelVisible(!!ev.data.visible);
+  });
+})();</script></head>
+<body>
+<div class="cursor" id="cursor" data-od-id="path-0"></div>
+<canvas id="gen-canvas" data-od-id="path-1"></canvas>
+<div class="noise" data-od-id="path-2"></div>
+
+<aside class="sidebar" data-od-id="sidebar">
+  <div class="brand" data-od-id="brand">HVS <span>Hanh Vuong Sy</span></div>
+  <nav class="nav-vertical" data-od-id="nav">
+    <a href="#hero" class="active" data-od-id="nav-hero">Start</a>
+    <a href="#stats" data-od-id="nav-stats">Scope</a>
+    <a href="#domains" data-od-id="nav-domains">Domains</a>
+    <a href="#stack" data-od-id="nav-stack">Stack</a>
+    <a href="#practice" data-od-id="nav-practice">Practice</a>
+    <a href="#oss" data-od-id="nav-oss">Open source</a>
+    <a href="#contact" data-od-id="nav-contact">Contact</a>
+  </nav>
+  <div class="sidebar-bottom" data-od-id="sidebar-meta">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" data-od-id="theme-toggle" type="button" style="margin-bottom:16px"></button>
+    <span>Hanoi, Vietnam</span>
+    <a href="mailto:syhanhcbq@gmail.com" data-od-id="email-link">syhanhcbq@gmail.com</a>
+  </div>
+</aside>
+
+<header class="topbar" data-od-id="topbar">
+  <div class="topbar-brand" data-od-id="topbar-brand">HVS <span>Hanh Vuong Sy</span></div>
+  <div class="topbar-actions" data-od-id="path-4-1">
+    <button class="theme-toggle" id="theme-toggle-top" aria-label="Toggle theme" data-od-id="theme-toggle-top" type="button"></button>
+    <button class="menu-toggle" aria-label="Menu" data-od-id="menu-toggle" type="button"><span></span><span></span></button>
+  </div>
+  <nav class="topbar-nav" data-od-id="topbar-nav">
+    <a href="#hero" class="active" data-od-id="topbar-nav-hero">Start</a>
+    <a href="#stats" data-od-id="topbar-nav-stats">Scope</a>
+    <a href="#domains" data-od-id="topbar-nav-domains">Domains</a>
+    <a href="#stack" data-od-id="topbar-nav-stack">Stack</a>
+    <a href="#practice" data-od-id="topbar-nav-practice">Practice</a>
+    <a href="#oss" data-od-id="topbar-nav-oss">Open source</a>
+    <a href="#contact" data-od-id="topbar-nav-contact">Contact</a>
+  </nav>
+</header>
+
+<main class="main" data-od-id="path-5">
+  <section id="hero" class="section hero" data-od-id="hero">
+    <canvas class="hero-canvas" id="hero-canvas" aria-hidden="true" data-od-id="path-5-0-0"></canvas>
+    <div class="eyebrow reveal" data-od-id="hero-eyebrow">Software architect · 2002</div>
+    <h1 class="reveal stagger-1" data-od-id="hero-title">Hanh<br>Vuong <em>Sy</em></h1>
+    <p class="reveal stagger-2" data-od-id="hero-intro">I build the systems that keep ambitious products alive — ERP platforms, automation engines, data infrastructure, blockchain marketplaces, and AI tooling. Backend-first, end-to-end.</p>
+    <div class="hero-meta reveal stagger-3" data-od-id="hero-meta">
+      <span>Backend systems</span>
+      <span>AI agents</span>
+      <span>Platform architecture</span>
+    </div>
+    <div class="scroll-hint reveal stagger-4" data-od-id="scroll-hint">Explore</div>
+  </section>
+
+  <section id="stats" class="section" data-od-id="stats">
+    <h2 class="section-title reveal" data-od-id="stats-title">Scope of work.</h2>
+    <div class="stats-grid reveal stagger-1" data-od-id="stats-grid">
+      <div class="stat-card" data-od-id="stat-commits">
+        <span class="stat-number">4.5k</span>
+        <span class="stat-label">GitHub commits</span>
+        <span class="stat-note">Across 135 repositories</span>
+      </div>
+      <div class="stat-card" data-od-id="stat-prs">
+        <span class="stat-number">155</span>
+        <span class="stat-label">Pull requests</span>
+        <span class="stat-note">Shipped and reviewed</span>
+      </div>
+      <div class="stat-card" data-od-id="stat-orgs">
+        <span class="stat-number">7</span>
+        <span class="stat-label">Organizations</span>
+        <span class="stat-note">Enterprise, Web3, AI, tools</span>
+      </div>
+      <div class="stat-card" data-od-id="stat-repos">
+        <span class="stat-number">135</span>
+        <span class="stat-label">Repositories</span>
+        <span class="stat-note">Backend, AI, infra, clients</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="domains" class="section" data-od-id="domains">
+    <h2 class="section-title reveal" data-od-id="domains-title">Domains of work.</h2>
+    <div class="accordion reveal stagger-1" data-od-id="domain-accordion">
+      <article class="accordion-item open" data-od-id="domain-erp">
+        <div class="accordion-head" data-od-id="erp-head">
+          <span class="accordion-index">D / 01</span>
+          <h3 data-od-id="path-5-2-1-0-0-1">ERP &amp; Enterprise SaaS</h3>
+          <div class="accordion-toggle"></div>
+        </div>
+        <div class="accordion-body" data-od-id="erp-body">
+          <p>Enterprise platforms where a wrong field has real cost. I have shipped multi-tenant ERP backends for construction and supply-chain clients across quotation engines, bill-of-quantity calculation, procurement workflows, approval chains, and role-based access.</p>
+          <p>That means schema design that survives growth, workflow state machines with audit logging and soft-delete safety, custom formula evaluation, third-party CRM and accounting integrations, and the API contracts that let frontend teams move fast without breaking operational integrity.</p>
+          <div class="accordion-tags"><span>Quotation &amp; BOQ</span><span>Procurement</span><span>Workflow</span><span>IAM</span><span>Audit</span><span>CRM / accounting sync</span></div>
+        </div>
+      </article>
+      <article class="accordion-item open" data-od-id="domain-automation">
+        <div class="accordion-head" data-od-id="automation-head">
+          <span class="accordion-index">D / 02</span>
+          <h3 data-od-id="path-5-2-1-1-0-1">Automation &amp; AI Systems</h3>
+          <div class="accordion-toggle"></div>
+        </div>
+        <div class="accordion-body" data-od-id="automation-body">
+          <p>Agentic workflows that do work while staying observable and controllable. I have designed RAG knowledge centres, code-generation agents with layered guardrails, and event-driven pipelines that carry signals from ingestion to action.</p>
+          <p>Execution is resilient by default: state machines for retries, fail-closed validation, semantic search over embedded documents, natural-language-to-code flows for formula repair, and clear surfaces where operators can intervene instead of guessing what the agent decided.</p>
+          <div class="accordion-tags"><span>Agents</span><span>RAG</span><span>Code generation</span><span>Signal pipelines</span><span>Guardrails</span><span>ZERO-SQL BI</span></div>
+        </div>
+      </article>
+      <article class="accordion-item open" data-od-id="domain-data">
+        <div class="accordion-head" data-od-id="data-head">
+          <span class="accordion-index">D / 03</span>
+          <h3 data-od-id="path-5-2-1-2-0-1">Data &amp; Market Infrastructure</h3>
+          <div class="accordion-toggle"></div>
+        </div>
+        <div class="accordion-body" data-od-id="data-body">
+          <p>Market and analytics environments shaped for continuous inputs, interpretable signals, and action without losing context. I have built multi-timeframe data ingestion, order lifecycle tracking, journaling, risk surfaces, and real-time decision dashboards.</p>
+          <p>The architecture spans message queues and caching for throughput, vector storage for semantic retrieval, deterministic pipeline stages, and statistical / machine-learning exploration including RFM segmentation, clustering, and association-rule mining for customer intelligence.</p>
+          <div class="accordion-tags"><span>Market data</span><span>Order lifecycle</span><span>Analytics</span><span>Real-time</span><span>Risk</span><span>Customer mining</span></div>
+        </div>
+      </article>
+      <article class="accordion-item open" data-od-id="domain-blockchain">
+        <div class="accordion-head" data-od-id="blockchain-head">
+          <span class="accordion-index">D / 04</span>
+          <h3 data-od-id="path-5-2-1-3-0-1">Blockchain &amp; Digital Assets</h3>
+          <div class="accordion-toggle"></div>
+        </div>
+        <div class="accordion-body" data-od-id="blockchain-body">
+          <p>Product surfaces for marketplaces and blockchain ecosystems, designed around trust, lifecycle, liquidity, and the systems behind every transaction. I have worked on wallet flows, NFT marketplaces, order matching, royalty distribution, cashback, and payment orchestration.</p>
+          <p>Backend concerns include custody patterns, event indexing, transaction reliability, and the accounting surfaces that let users and operators trace every asset movement.</p>
+          <div class="accordion-tags"><span>NFT marketplace</span><span>Wallet &amp; custody</span><span>Trading</span><span>Payments</span><span>Royalties</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="stack" class="section" data-od-id="stack">
+    <h2 class="section-title reveal" data-od-id="stack-title">Working stack.</h2>
+    <div class="stack-grid reveal stagger-1" data-od-id="stack-grid">
+      <article class="stack-group" data-od-id="stack-languages"><span class="stack-index">S / 01</span><h3 data-od-id="path-5-3-1-0-1">Languages</h3><p>TypeScript · Python · Go · Java · C# · C / C++ · SQL · Swift · JavaScript (ES2022+) · Bash · Java ME (J2ME) · Assembly (NASM)</p></article>
+      <article class="stack-group" data-od-id="stack-backend"><span class="stack-index">S / 02</span><h3 data-od-id="path-5-3-1-1-1">Backend &amp; API</h3><p>NestJS (v10–11) · FastAPI · Gin · Express (v4–5) · Spring Boot · Next.js Custom Server · Prisma · Passport (JWT / OAuth / OIDC) · Azure MSAL · Stripe · Bull / BullMQ · Socket.io · SSE · gRPC · TCP microservices</p></article>
+      <article class="stack-group" data-od-id="stack-data"><span class="stack-index">S / 03</span><h3 data-od-id="path-5-3-1-2-1">Data &amp; Infra</h3><p>PostgreSQL · Redis · RabbitMQ · Kafka · MongoDB · SQLite · MinIO · Qdrant · Docker / Compose · Nx Monorepo · Bull queues · Playwright · Cron</p></article>
+      <article class="stack-group" data-od-id="stack-ai"><span class="stack-index">S / 04</span><h3 data-od-id="path-5-3-1-3-1">AI &amp; Search</h3><p>Hermes Agent (custom code-gen) · LangGraph · LangChain · RAG pipeline · Qdrant (semantic search) · MCP Server · Langfuse · RAGAS · GEPA (evaluation) · Crawl4AI · faster-whisper</p></article>
+      <article class="stack-group" data-od-id="stack-frontend"><span class="stack-index">S / 05</span><h3 data-od-id="path-5-3-1-4-1">Frontend</h3><p>Next.js (v14–16) · React (v17–19) · Vite · Zustand · TanStack Query · Tailwind (v3–4) · Radix UI · Framer Motion · ReactFlow · react-signature-canvas · CRA · UMD</p></article>
+      <article class="stack-group" data-od-id="stack-web3"><span class="stack-index">S / 06</span><h3 data-od-id="path-5-3-1-5-1">Blockchain &amp; Automation</h3><p>Immutable X · Web3.js · TradingView CDP · MITM Proxy · OpenCV · OCR (Tesseract) · Selenium · adbutils · Chrome MV3 Extension · Telegram Bot API · Telethon · Kafka pipelines</p></article>
+    </div>
+  </section>
+
+  <section id="practice" class="section" data-od-id="practice">
+    <h2 class="section-title reveal" data-od-id="practice-title">Practice, not credentials.</h2>
+    <div class="cap-list reveal stagger-1" data-od-id="cap-list">
+      <div class="cap-row" data-num="01" data-od-id="cap-arch"><strong>System boundaries &amp; service contracts</strong><p>Nx monorepos split into API, web, engine, and IAM packages; TCP microservice communication; API gateways that own login, refresh, and JWT guard flow; centralized Prisma schemas shared across services. Worked across NestJS, FastAPI, Gin, Express, and Spring Boot backends.</p></div>
+      <div class="cap-row" data-num="02" data-od-id="cap-ai"><strong>Agent orchestration &amp; knowledge workflows</strong><p>Code-generation agents that write and repair source against a rule set, guarded by six fail-closed layers; RAG pipelines over vector stores with semantic retrieval; custom MCP servers; an AI proxy that routes across 40+ providers and reclaims 20–40% of tokens via real-time routing.</p></div>
+      <div class="cap-row" data-num="03" data-od-id="cap-data"><strong>Data durability &amp; real-time pipelines</strong><p>Event streams over Kafka and RabbitMQ; Redis caching; Bull/BullMQ queues for campaign and background work; deterministic multi-stage pipelines with ordered steps; vector and object storage (Qdrant, MinIO) alongside PostgreSQL and MongoDB persistence models.</p></div>
+      <div class="cap-row" data-num="04" data-od-id="cap-delivery"><strong>Product platforms &amp; end-to-end ownership</strong><p>Quote-and-BOM tools that reconcile formulas and catch unit and parameter errors before they ship; ZERO-SQL BI surfaces that query structured data without hand-written SQL; workflow builders and dashboards on React + Vite, delivered as Docker images with CI/CD.</p></div>
+      <div class="cap-row" data-num="05" data-od-id="cap-security"><strong>Identity, access, and operational trust</strong><p>Passport JWT, Google OAuth, and Entra ID with role-based guards; optional-JWT and auth interceptor patterns at the gateway; audit trails and fail-closed validation around anything that mutates business state.</p></div>
+    </div>
+  </section>
+
+  <section id="oss" class="section" data-od-id="oss">
+    <h2 class="section-title reveal" data-od-id="oss-title">Beyond product work.</h2>
+    <div class="evidence-grid reveal stagger-1" data-od-id="evidence-grid">
+      <article class="evidence-card" data-od-id="evidence-oss">
+        <span class="evidence-kicker">Open source</span>
+        <h3 data-od-id="path-5-5-1-0-1">Hermes Agent and macOS tooling.</h3>
+        <p>Contributed to NousResearch’s Hermes Agent, a self-improving agent system built around learning loops and experience-derived skills; also contributed to macOS workspace tooling.</p>
+      </article>
+      <article class="evidence-card" data-od-id="evidence-learning">
+        <span class="evidence-kicker">Applied learning</span>
+        <h3 data-od-id="path-5-5-1-1-1">26 AI engineering labs.</h3>
+        <p>Hands-on work across alignment, LLM fine-tuning, memory systems, RAG evaluation, deployment, guardrails, multi-agent MCP, and data foundations.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="contact" class="section contact-section" data-od-id="contact">
+    <h2 class="contact-title reveal" data-od-id="contact-title">Let’s make the complex feel inevitable.</h2>
+    <a class="email-link reveal stagger-1" href="mailto:syhanhcbq@gmail.com" data-od-id="email-cta">syhanhcbq@gmail.com</a>
+    <div class="contact-grid reveal stagger-2" data-od-id="contact-meta">
+      <div>
+        <span>Profile</span>
+        <a href="https://github.com/hanhvs" target="_blank" rel="noopener" data-od-id="github-link">github.com/hanhvs</a>
+      </div>
+      <div>
+        <span>Location</span>
+        <a data-od-id="location">Hanoi, Vietnam</a>
+      </div>
+      <div>
+        <span>Status</span>
+        <a data-od-id="status">Available for work</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  // custom cursor
+  const cursor=document.getElementById('cursor');
+  if(cursor && !matchMedia('(pointer:coarse)').matches){
+    let cx=innerWidth/2,cy=innerHeight/2,tx=innerWidth/2,ty=innerHeight/2;
+    addEventListener('pointermove',e=>{tx=e.clientX;ty=e.clientY},{passive:true});
+    function loop(){
+      cx+=(tx-cx)*.12; cy+=(ty-cy)*.12;
+      cursor.style.left=cx+'px'; cursor.style.top=cy+'px';
+      requestAnimationFrame(loop);
+    } loop();
+    document.querySelectorAll('a,button,.accordion-head,.cap-row').forEach(el=>{
+      el.addEventListener('pointerenter',()=>cursor.classList.add('hover'));
+      el.addEventListener('pointerleave',()=>cursor.classList.remove('hover'));
+    });
+  }
+
+  // mobile menu
+  const topbar=document.querySelector('.topbar');
+  const toggle=document.querySelector('.menu-toggle');
+  const topbarNav=document.querySelector('.topbar-nav');
+  if(toggle && topbar){
+    toggle.addEventListener('click',()=>{topbar.classList.toggle('menu-open')});
+    topbarNav.querySelectorAll('a').forEach(a=>{
+      a.addEventListener('click',()=>{topbar.classList.remove('menu-open')});
+    });
+    addEventListener('resize',()=>{if(innerWidth>1080)topbar.classList.remove('menu-open')},{passive:true});
+  }
+
+  // theme toggle — light/dark + auto (follows system), persisted
+  const root=document.documentElement;
+  const STORE='hvs:theme';
+  const mq=matchMedia('(prefers-color-scheme: dark)');
+  const toggles=[document.getElementById('theme-toggle'),document.getElementById('theme-toggle-top')].filter(Boolean);
+  function themeLabels(){
+    const mode=root.dataset.theme||'light';
+    toggles.forEach(b=>{b.textContent=mode==='light'?'Theme · Dark':'Theme · Light'});
+  }
+  function applyTheme(mode){
+    if(mode==='dark'){root.dataset.theme='dark'}
+    else if(mode==='light'){root.setAttribute('data-theme','light')}
+    else{root.removeAttribute('data-theme')}
+    try{localStorage.setItem(STORE,mode)}catch(_){}
+    themeLabels();
+  }
+  function toggleTheme(){
+    const cur=root.dataset.theme||'light';
+    applyTheme(cur==='dark'?'light':'dark');
+  }
+  let saved=null;
+  try{saved=localStorage.getItem(STORE)}catch(_){}
+  if(!saved) saved=mq.matches?'dark':'light';
+  root.dataset.theme=(saved==='system'?(mq.matches?'dark':'light'):saved);
+  mq.addEventListener('change',()=>{
+    if((localStorage.getItem(STORE)||mq.matches?'dark':'light')==='system'){
+      root.dataset.theme=mq.matches?'dark':'light';
+    }
+  });
+  toggles.forEach(b=>b.addEventListener('click',toggleTheme));
+  themeLabels();
+
+  // generative canvas background — monochrome + mouse interaction
+  const canvas=document.getElementById('gen-canvas'),ctx=canvas.getContext('2d');
+  let W,H,DPR=1,particles=[],lines=[],time=0,scrollY=0;
+  let mx=innerWidth/2,my=innerHeight/2,mouseActive=false,mouseTimeout;
+  function rgbVar(name,a){const c=getComputedStyle(document.documentElement).getPropertyValue(name).trim();return 'rgba('+c+','+a+')'}
+  addEventListener('pointermove',e=>{
+    mx=e.clientX; my=e.clientY; mouseActive=true;
+    clearTimeout(mouseTimeout);
+    mouseTimeout=setTimeout(()=>{mouseActive=false},1200);
+  },{passive:true});
+  function resize(){
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    W=innerWidth; H=innerHeight;
+    canvas.width=W*DPR; canvas.height=H*DPR;
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    initParticles();
+  }
+  function initParticles(){
+    const count=Math.floor((W*H)/25000);
+    particles=[]; lines=[];
+    for(let i=0;i<count;i++){
+      particles.push({
+        x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+        r:Math.random()*1.2+.4,
+        phase:Math.random()*Math.PI*2,
+        speed:.2+Math.random()*.6
+      });
+    }
+    const lineCount=Math.floor(count*.35);
+    for(let i=0;i<lineCount;i++){
+      lines.push({
+        a:Math.floor(Math.random()*count),
+        b:Math.floor(Math.random()*count),
+        life:Math.random(),
+        speed:.003+Math.random()*.006
+      });
+    }
+  }
+  addEventListener('scroll',()=>{scrollY=scrollY+(.2*(window.scrollY-scrollY))},{passive:true});
+  function draw(){
+    ctx.fillStyle=rgbVar('--fade-rgb',.18);
+    ctx.fillRect(0,0,W,H);
+    time+=.004;
+    const cx=W/2, cy=H/2;
+    const interactionRadius=240;
+    const nearby=[];
+    for(let p of particles){
+      const dx=p.x-cx, dy=p.y-cy;
+      const distC=Math.sqrt(dx*dx+dy*dy)||1;
+      const angle=Math.atan2(dy,dx)+Math.sin(time+p.phase)*.5;
+      const force=.0008*(1-distC/(Math.max(W,H)));
+      p.vx+=Math.cos(angle)*force;
+      p.vy+=Math.sin(angle)*force;
+      if(mouseActive){
+        const dmx=p.x-mx, dmy=p.y-my;
+        const dm=Math.sqrt(dmx*dmx+dmy*dmy)||1;
+        if(dm<interactionRadius){
+          const repel=(1-dm/interactionRadius)*.09;
+          const tangentAngle=Math.atan2(dmy,dmx)+Math.PI/2;
+          p.vx+=Math.cos(tangentAngle)*repel + (dmx/dm)*repel*.25;
+          p.vy+=Math.sin(tangentAngle)*repel + (dmy/dm)*repel*.25;
+          nearby.push(p);
+        }
+      }
+      p.vx*=.98; p.vy*=.98;
+      p.x+=p.vx*p.speed + Math.sin(time*2+p.phase)*.15;
+      p.y+=p.vy*p.speed + Math.cos(time*1.5+p.phase)*.15;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      const alpha=.15+.3*Math.sin(time*3+p.phase);
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=rgbVar('--particle-rgb',alpha);
+      ctx.fill();
+    }
+    ctx.strokeStyle=rgbVar('--particle-rgb',.08);
+    ctx.lineWidth=.6;
+    for(let l of lines){
+      const pa=particles[l.a], pb=particles[l.b];
+      l.life+=l.speed; if(l.life>1||l.life<0)l.speed*=-1;
+      const mxLine=pa.x+(pb.x-pa.x)*l.life;
+      const myLine=pa.y+(pb.y-pa.y)*l.life;
+      ctx.beginPath();
+      ctx.moveTo(pa.x,pa.y);
+      ctx.lineTo(mxLine,myLine);
+      ctx.stroke();
+    }
+    if(nearby.length){
+      const connectLimit=Math.min(nearby.length,20);
+      nearby.sort((a,b)=>Math.hypot(a.x-mx,a.y-my)-Math.hypot(b.x-mx,b.y-my));
+      for(let i=0;i<connectLimit;i++){
+        const p=nearby[i];
+        const distM=Math.hypot(p.x-mx,p.y-my)||1;
+        ctx.beginPath();
+        ctx.moveTo(mx,my);
+        ctx.lineTo(p.x,p.y);
+        ctx.strokeStyle=rgbVar('--particle-rgb',.10+.22*(1-distM/interactionRadius));
+        ctx.lineWidth=.7;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(mx,my,3,0,Math.PI*2);
+      ctx.fillStyle=rgbVar('--particle-rgb',.75);
+      ctx.fill();
+    }
+    const wipe=(scrollY/H)*120;
+    ctx.fillStyle=rgbVar('--fade-rgb',Math.min(.55,scrollY/(H*1.5)));
+    ctx.fillRect(0,0,W,wipe);
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize',resize,{passive:true});
+  resize(); draw();
+
+  // hero canvas: monochrome brush strokes
+  const hCanvas=document.getElementById('hero-canvas'),hCtx=hCanvas.getContext('2d');
+  let hW,hH,hDPR=1,hStrokes=[],hTime=0;
+  function resizeHero(){
+    hDPR=Math.min(window.devicePixelRatio||1,2);
+    const hero=document.getElementById('hero');
+    hW=hero.offsetWidth; hH=hero.offsetHeight;
+    hCanvas.width=hW*hDPR; hCanvas.height=hH*hDPR;
+    hCanvas.style.width=hW+'px'; hCanvas.style.height=hH+'px';
+    hCtx.setTransform(hDPR,0,0,hDPR,0,0);
+    hStrokes=[];
+    const n=Math.floor((hW*hH)/180000)+3;
+    for(let i=0;i<n;i++){
+      hStrokes.push({
+        x:hW*.5+((Math.random()-.5)*hW*.6),
+        y:hH*.5+((Math.random()-.5)*hH*.6),
+        r:80+Math.random()*260,
+        phase:Math.random()*Math.PI*2,
+        speed:.0003+Math.random()*.0005
+      });
+    }
+  }
+  function drawHero(){
+    hCtx.clearRect(0,0,hW,hH);
+    hTime+=.006;
+    for(let s of hStrokes){
+      const x=s.x+Math.sin(hTime+s.phase)*60;
+      const y=s.y+Math.cos(hTime*.7+s.phase)*40;
+      const grad=hCtx.createRadialGradient(x,y,0,x,y,s.r);
+      grad.addColorStop(0,rgbVar('--hero-rgb',.09));
+      grad.addColorStop(.5,rgbVar('--hero-rgb',.04));
+      grad.addColorStop(1,rgbVar('--hero-rgb',0));
+      hCtx.fillStyle=grad;
+      hCtx.beginPath();
+      hCtx.arc(x,y,s.r,0,Math.PI*2);
+      hCtx.fill();
+    }
+    requestAnimationFrame(drawHero);
+  }
+  resizeHero(); drawHero();
+  addEventListener('resize',resizeHero,{passive:true});
+
+  // accordion
+  document.querySelectorAll('.accordion-head').forEach(head=>{
+    head.addEventListener('click',()=>{
+      const item=head.closest('.accordion-item');
+      item.classList.toggle('open');
+    });
+  });
+
+  // reveals + nav active state
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        const sec=e.target.closest && e.target.closest('section[id]');
+        if(sec){
+          document.querySelectorAll('.nav-vertical a, .topbar-nav a').forEach(a=>a.classList.remove('active'));
+          const link=document.querySelector('.nav-vertical a[href="#'+sec.id+'"]');
+          const tLink=document.querySelector('.topbar-nav a[href="#'+sec.id+'"]');
+          if(link) link.classList.add('active');
+          if(tLink) tLink.classList.add('active');
+        }
+      }
+    });
+  },{threshold:.35});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.querySelectorAll('section[id]').forEach(sec=>io.observe(sec));
+})();
+</script>
+
+
+<script data-od-preview-content-size-bridge>(function(){
+  if (window.__odPreviewContentSizeBridge) return;
+  window.__odPreviewContentSizeBridge = true;
+  var pending = false;
+  var lastRequest = null;
+  var documentEpoch = "";
+  function measure(){
+    var root = document.documentElement;
+    var body = document.body || root;
+    if (!root) return null;
+    var scrollValues = [
+      root.scrollWidth,
+      body && body.scrollWidth,
+    ];
+    var clientValues = [
+      root.clientWidth,
+      body && body.clientWidth
+    ];
+    var scrollWidth = 0;
+    var clientWidth = 0;
+    for (var i = 0; i < scrollValues.length; i += 1) {
+      var nextScroll = Number(scrollValues[i] || 0);
+      if (Number.isFinite(nextScroll) && nextScroll > scrollWidth) scrollWidth = nextScroll;
+    }
+    for (var j = 0; j < clientValues.length; j += 1) {
+      var nextClient = Number(clientValues[j] || 0);
+      if (Number.isFinite(nextClient) && nextClient > clientWidth) clientWidth = nextClient;
+    }
+    return {
+      scrollWidth: scrollWidth > 0 ? Math.ceil(scrollWidth) : null,
+      clientWidth: clientWidth > 0 ? Math.ceil(clientWidth) : null
+    };
+  }
+  function post(){
+    if (!lastRequest) return;
+    var size = measure();
+    try {
+      window.parent.postMessage({
+        type: 'od:preview-content-size',
+        measurementId: lastRequest.measurementId,
+        generation: lastRequest.generation,
+        documentEpoch: documentEpoch,
+        scrollWidth: size && size.scrollWidth,
+        clientWidth: size && size.clientWidth
+      }, '*');
+    } catch (_) {}
+  }
+  function schedule(){
+    if (pending) return;
+    pending = true;
+    window.requestAnimationFrame(function(){
+      pending = false;
+      post();
+    });
+  }
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:preview-content-size-request') return;
+    if (typeof data.measurementId !== 'string' || typeof data.generation !== 'string') return;
+    lastRequest = {
+      measurementId: data.measurementId,
+      generation: data.generation
+    };
+    schedule();
+  });
+  window.addEventListener('resize', schedule);
+  if (typeof ResizeObserver !== 'undefined') {
+    try {
+      var observer = new ResizeObserver(schedule);
+      observer.observe(document.documentElement);
+      if (document.body) observer.observe(document.body);
+    } catch (_) {}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', schedule);
+  } else {
+    setTimeout(schedule, 0);
+  }
+  setTimeout(schedule, 80);
+  setTimeout(schedule, 260);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(schedule).catch(function(){});
+  }
+})();</script><script data-od-snapshot-bridge>(function(){
+  var SNAPSHOT_STYLE_PROPS = [
+    'display','position','box-sizing','width','height','min-width','max-width','min-height','max-height',
+    'margin','margin-top','margin-right','margin-bottom','margin-left',
+    'padding','padding-top','padding-right','padding-bottom','padding-left',
+    'border','border-top','border-right','border-bottom','border-left','border-radius',
+    'font','font-family','font-size','font-weight','font-style','line-height','letter-spacing',
+    'color','background-color','opacity','transform','transform-origin','overflow','overflow-x','overflow-y',
+    'white-space','text-align','vertical-align','object-fit','object-position',
+    'flex','flex-direction','flex-wrap','flex-grow','flex-shrink','flex-basis',
+    'grid','grid-template-columns','grid-template-rows','grid-column','grid-row',
+    'gap','row-gap','column-gap','align-items','align-content','align-self',
+    'justify-items','justify-content','justify-self','inset','top','right','bottom','left',
+    'z-index','box-shadow','text-shadow'
+  ];
+  function copyComputedStyle(source, target){
+    if (!source || !target || source.nodeType !== 1 || target.nodeType !== 1) return;
+    var computed = window.getComputedStyle(source);
+    var style = target.getAttribute('style') || '';
+    for (var i = 0; i < SNAPSHOT_STYLE_PROPS.length; i++){
+      var prop = SNAPSHOT_STYLE_PROPS[i];
+      var value = computed.getPropertyValue(prop);
+      if (value) style += prop + ':' + value + ';';
+    }
+    target.setAttribute('style', style);
+  }
+  function syncElementState(source, target){
+    var tag = source.tagName ? source.tagName.toLowerCase() : '';
+    if (tag === 'img' && source.currentSrc) target.setAttribute('src', source.currentSrc);
+    if (tag === 'input' || tag === 'textarea') target.setAttribute('value', source.value || '');
+    if (tag === 'canvas') {
+      try {
+        var img = document.createElement('img');
+        img.setAttribute('src', source.toDataURL('image/png'));
+        img.setAttribute('style', target.getAttribute('style') || '');
+        target.parentNode && target.parentNode.replaceChild(img, target);
+      } catch (_) {}
+    }
+  }
+  function inlineSnapshotStyles(originalRoot, cloneRoot){
+    copyComputedStyle(originalRoot, cloneRoot);
+    syncElementState(originalRoot, cloneRoot);
+    var originals = originalRoot.querySelectorAll('*');
+    var clones = cloneRoot.querySelectorAll('*');
+    var count = Math.min(originals.length, clones.length, 3500);
+    for (var i = 0; i < count; i++){
+      copyComputedStyle(originals[i], clones[i]);
+      syncElementState(originals[i], clones[i]);
+    }
+  }
+  // Must run AFTER pruneHiddenSnapshotNodes: prune pairs originalRoot/cloneRoot
+  // querySelectorAll('*') lists by index, so removing clone nodes (scripts,
+  // links) before it shifts every later clone under the wrong original and the
+  // misdirected removals can delete the visible content (or the body itself),
+  // yielding a uniform "empty-render" frame.
+  function stripSnapshotResources(cloneRoot){
+    var scripts = cloneRoot.querySelectorAll('script');
+    for (var s = scripts.length - 1; s >= 0; s--) scripts[s].remove();
+    var links = cloneRoot.querySelectorAll('link[rel~="stylesheet"], link[rel~="preload"], link[rel~="preconnect"]');
+    for (var l = links.length - 1; l >= 0; l--) links[l].remove();
+    var styles = cloneRoot.querySelectorAll('style');
+    for (var st = 0; st < styles.length; st++) {
+      styles[st].textContent = (styles[st].textContent || '')
+        .replace(/@import[^;]+;/gi, '')
+        .replace(/@font-face\s*\{[^}]*\}/gi, '');
+    }
+    // HTML tolerates attribute names XML rejects (@click, :href, {shorthand}).
+    // One such attribute anywhere makes the whole foreignObject SVG unparseable,
+    // so drop any attribute whose name is not a valid XML Name.
+    var XML_NAME = /^[A-Za-z_][A-Za-z0-9_.-]*(?::[A-Za-z_][A-Za-z0-9_.-]*)?$/;
+    var all = cloneRoot.querySelectorAll('*');
+    for (var e = 0; e < all.length; e++) {
+      var attrs = all[e].attributes;
+      for (var a = attrs.length - 1; a >= 0; a--) {
+        if (!XML_NAME.test(attrs[a].name)) all[e].removeAttribute(attrs[a].name);
+      }
+    }
+  }
+  // innerHTML uses the HTML serializer, which emits void elements (<br>, <img>)
+  // without self-closing slashes — invalid XML, so the foreignObject SVG image
+  // fails to parse (img.onerror → 'snapshot image failed'). XMLSerializer emits
+  // well-formed XHTML instead.
+  function serializeSnapshotXhtml(node){
+    try {
+      var serializer = new XMLSerializer();
+      var out = '';
+      for (var i = 0; i < node.childNodes.length; i++) out += serializer.serializeToString(node.childNodes[i]);
+      return out;
+    } catch (_) { return node.innerHTML || ''; }
+  }
+  function pruneHiddenSnapshotNodes(originalRoot, cloneRoot){
+    var originals = originalRoot.querySelectorAll('*');
+    var clones = cloneRoot.querySelectorAll('*');
+    var count = Math.min(originals.length, clones.length);
+    var removals = [];
+    for (var i = 0; i < count; i++){
+      var original = originals[i];
+      var clone = clones[i];
+      if (!original || !clone || !clone.parentNode) continue;
+      var computed = window.getComputedStyle(original);
+      if (computed && (computed.display === 'none' || computed.visibility === 'hidden')) {
+        removals.push(clone);
+      }
+    }
+    for (var r = removals.length - 1; r >= 0; r--){
+      if (removals[r].parentNode) removals[r].parentNode.removeChild(removals[r]);
+    }
+  }
+  function waitForImages(){
+    var imgs = Array.prototype.slice.call(document.images || []);
+    return Promise.all(imgs.map(function(img){
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(resolve){
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+  function scrollOffset(){
+    var doc = document.documentElement;
+    var body = document.body;
+    return {
+      x: Math.max(window.scrollX || 0, doc ? doc.scrollLeft || 0 : 0, body ? body.scrollLeft || 0 : 0),
+      y: Math.max(window.scrollY || 0, doc ? doc.scrollTop || 0 : 0, body ? body.scrollTop || 0 : 0)
+    };
+  }
+  function escapeAttribute(value){
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  function snapshotBackgroundColor(){
+    try {
+      var probe = window.getComputedStyle(document.body || document.documentElement);
+      var bg = probe && probe.backgroundColor || '';
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') return '#ffffff';
+      return bg;
+    } catch (_) { return '#ffffff'; }
+  }
+  // After painting, sample the canvas: a uniform (single-color) bitmap means
+  // the foreignObject rasterizer painted nothing — Chromium frequently refuses
+  // to paint <foreignObject> HTML loaded via <img>. Treating that as an honest
+  // 'empty-render' error (instead of shipping the background-only frame) lets
+  // the host fall back / surface a real failure rather than a silent black PNG.
+  function canvasLooksBlank(ctx, cw, ch){
+    try {
+      var data = ctx.getImageData(0, 0, cw, ch).data;
+      var step = Math.max(4, Math.floor((cw * ch) / 4096)) * 4;
+      var first = null, samples = 0;
+      for (var i = 0; i + 3 < data.length; i += step){
+        samples++;
+        if (!first){ first = [data[i], data[i+1], data[i+2], data[i+3]]; continue; }
+        if (Math.abs(data[i]-first[0]) > 6 || Math.abs(data[i+1]-first[1]) > 6 ||
+            Math.abs(data[i+2]-first[2]) > 6 || Math.abs(data[i+3]-first[3]) > 6) return false;
+      }
+      return samples > 8;
+    } catch (_) { return false; }
+  }
+  // Rasterize the current view (or the whole document, when opts.full) via an
+  // SVG <foreignObject>. Returns a Promise so it can be reused by both the
+  // od:snapshot message handler AND the export-capture bridge (image export /
+  // PDF) — the foreignObject path is fast and never blocks on external
+  // image network loads the way a DOM-cloning rasterizer does.
+  function captureSnapshot(opts){
+    opts = opts || {};
+    return new Promise(function(resolve, reject){
+      var w = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+      var h = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 1);
+      var dpr = window.devicePixelRatio || 1;
+      var bgColor = snapshotBackgroundColor();
+      var docW = Math.max(w, document.documentElement.scrollWidth || 0, document.body ? document.body.scrollWidth : 0);
+      var docH = Math.max(h, document.documentElement.scrollHeight || 0, document.body ? document.body.scrollHeight : 0);
+      var full = !!opts.full;
+      var capW = full ? docW : w;
+      var capH = full ? docH : h;
+      var clone = document.documentElement.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      inlineSnapshotStyles(document.documentElement, clone);
+      pruneHiddenSnapshotNodes(document.documentElement, clone);
+      stripSnapshotResources(clone);
+      var scroll = full ? { x: 0, y: 0 } : scrollOffset();
+      var cloneBody = clone.querySelector('body');
+      var rootStyle = clone.getAttribute('style') || '';
+      var bodyStyle = cloneBody ? cloneBody.getAttribute('style') || '' : '';
+      var bodyContent = serializeSnapshotXhtml(cloneBody || clone);
+      var wrapperStyle = rootStyle + bodyStyle +
+        'margin:0;position:relative;left:' + (-scroll.x) + 'px;top:' + (-scroll.y) + 'px;' +
+        'width:' + docW + 'px;height:' + docH + 'px;overflow:visible;';
+      var html = '<div xmlns="http://www.w3.org/1999/xhtml" style="' + escapeAttribute(wrapperStyle) + '">' + bodyContent + '</div>';
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + capW + '" height="' + capH + '" viewBox="0 0 ' + capW + ' ' + capH + '">' +
+        '<foreignObject x="0" y="0" width="' + docW + '" height="' + docH + '">' +
+        html +
+        '</foreignObject></svg>';
+      var img = new Image();
+      img.onload = function(){
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.floor(capW * dpr));
+          canvas.height = Math.max(1, Math.floor(capH * dpr));
+          var ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('no 2d context');
+          ctx.scale(dpr, dpr);
+          // Opaque base so a transparent (un-painted) raster never flattens to
+          // pure black in clipboards / PNG viewers.
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, capW, capH);
+          ctx.drawImage(img, 0, 0, capW, capH);
+          if (canvasLooksBlank(ctx, canvas.width, canvas.height)) {
+            reject(new Error('empty-render'));
+            return;
+          }
+          resolve({ dataUrl: canvas.toDataURL('image/png'), w: canvas.width, h: canvas.height });
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error(String(err && err.message || err)));
+        }
+      };
+      img.onerror = function(){ reject(new Error('snapshot image failed')); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+  // Exposed so the export-capture bridge (same document) can reuse this renderer.
+  window.__odCaptureSnapshot = function(opts){
+    return waitForImages().then(function(){ return captureSnapshot(opts || {}); });
+  };
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:snapshot' || !data.id) return;
+    window.__odCaptureSnapshot({ full: !!data.full }).then(function(res){
+      window.parent.postMessage({ type: 'od:snapshot:result', id: String(data.id), dataUrl: res.dataUrl, w: res.w, h: res.h }, '*');
+    }, function(err){
+      window.parent.postMessage({ type: 'od:snapshot:result', id: String(data.id), error: String(err && err.message || err) }, '*');
+    });
+  });
+})();</script><script data-od-export-capture-bridge>(function(){
+  function raf(){ return new Promise(function(r){ requestAnimationFrame(function(){ r(); }); }); }
+  function settle(){
+    var fonts = (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(function(){}) : Promise.resolve();
+    var imgs = Promise.all(Array.prototype.slice.call(document.images||[]).map(function(img){
+      if (img.complete) return Promise.resolve();
+      return new Promise(function(r){ img.addEventListener('load', r, {once:true}); img.addEventListener('error', r, {once:true}); });
+    }));
+    return Promise.all([fonts, imgs]).then(raf).then(raf);
+  }
+  function deckState(){
+    try { if (typeof window.__odDeckSlideState === 'function') return window.__odDeckSlideState(); } catch(_){}
+    return { active: 0, count: 1 };
+  }
+  function navTo(index, delay){
+    return new Promise(function(resolve){
+      try { window.postMessage({ type:'od:slide', action:'go', index: index }, '*'); } catch(_){}
+      var tries = 0;
+      function check(){
+        tries++;
+        if (deckState().active === index || tries > 14) { resolve(); return; }
+        setTimeout(check, 80);
+      }
+      setTimeout(check, Math.max(60, delay||0));
+    });
+  }
+  function captureImage(deck){
+    // Reuse the shared SVG-foreignObject renderer (injectSnapshotBridge). For a
+    // deck the active slide fills the viewport, so a viewport capture IS the
+    // slide; a non-deck page captures the full document.
+    if (typeof window.__odCaptureSnapshot !== 'function') {
+      return Promise.reject(new Error('snapshot renderer unavailable'));
+    }
+    return window.__odCaptureSnapshot({ full: !deck });
+  }
+  function notes(){
+    var el = document.getElementById('speaker-notes');
+    if (el) {
+      var t = el.textContent || '';
+      try { var j = JSON.parse(t); if (Array.isArray(j)) return j; } catch(_){}
+      var plain = t.replace(/\s+/g,' ').trim();
+      if (plain) return plain;
+    }
+    var list = [];
+    // Match every .slide in document order — per-slide notes must line up
+    // 1:1 with the slide list regardless of the deck's container nesting.
+    var slideNodes = document.querySelectorAll('.slide');
+    for (var i = 0; i < slideNodes.length; i++) {
+      var noteEl = slideNodes[i].querySelector('.notes');
+      list.push(noteEl ? (noteEl.textContent || '').replace(/\s+/g, ' ').trim() : '');
+    }
+    return list.length ? list : '';
+  }
+  function send(msg){ try { window.parent.postMessage(msg, '*'); } catch(_){} }
+  function run(req){
+    var id = req.id;
+    var deck = !!req.deck;
+    var single = !!req.single;
+    var delay = req.delay || 350;
+    Promise.resolve().then(function(){
+      var st = deckState();
+      var total = (!single && deck && st.count > 1) ? st.count : 1;
+      var notesAll = notes();
+      function noteFor(i){ return Array.isArray(notesAll) ? (notesAll[i]||'') : (i===0 ? notesAll : ''); }
+      var idx = 0;
+      function step(){
+        if (idx >= total){ send({ type:'od:export-capture:done', id:id, total: total }); return; }
+        var i = idx;
+        var navP = (!single && deck && total > 1) ? navTo(i, delay) : Promise.resolve();
+        navP.then(settle).then(function(){
+          try {
+            captureImage(deck).then(function(img){
+              send({ type:'od:export-capture:slide', id:id, index:i, total:total, dataUrl: img.dataUrl, w: img.w, h: img.h, notes: noteFor(i) });
+              idx++; setTimeout(step, 0);
+            }).catch(function(err){ send({ type:'od:export-capture:error', id:id, error: String(err && err.message || err) }); });
+          } catch(err){ send({ type:'od:export-capture:error', id:id, error: String(err && err.message || err) }); }
+        });
+      }
+      step();
+    }).catch(function(err){
+      send({ type:'od:export-capture:error', id:id, error: String(err && err.message || err) });
+    });
+  }
+  window.addEventListener('message', function(ev){
+    var data = ev && ev.data;
+    if (!data || data.type !== 'od:export-capture' || !data.id) return;
+    run(data);
+  });
+})();</script><template data-od-srcdoc-transport-body-complete=""></template></body></html>
