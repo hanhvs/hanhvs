@@ -12,16 +12,6 @@
 
 ## What I build with
 
-<div align="center">
-
-<img src="https://skillicons.dev/icons?i=nestjs,fastapi,express,go,spring,nextjs,react,vite,angular,tailwind" />
-
-<img src="https://skillicons.dev/icons?i=py,sklearn,docker,postgres,redis,rabbitmq,kafka,aws,githubactions,prisma" />
-
-<img src="https://skillicons.dev/icons?i=electron,tauri,unity,cs,java,vscode" />
-
-</div>
-
 <br>
 
 - **Backend** — NestJS · FastAPI · Express/Fastify · Go/Gin · Spring Boot · Passport (JWT/OAuth2/Entra ID/MSAL) — from a 10-service NFT marketplace to a 742-commit enterprise quotation engine.
