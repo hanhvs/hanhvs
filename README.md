@@ -85,6 +85,10 @@ runs the same everywhere it's asked to.
 — a deployment platform for the moment code is ready to stop being a project
 and start being a product.
 
+**[tonyminibot/Vikey](https://github.com/tonyminibot/Vikey)**
+— a Vietnamese input method for macOS. Merged a patch so Vikey leaves remote
+desktop apps untouched, plus a per-app auto switch toggle.
+
 And a patch of **[9router](https://github.com/KGBRecord/9router)** that never
 made it upstream — not because it was rejected, but because it deserved its
 own home. It lives in **[KGBRecord](https://github.com/KGBRecord)**, unlocked,
