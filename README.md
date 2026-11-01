@@ -37,6 +37,7 @@ Contributions and forks I actively maintain outside my own orgs:
 - **[NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)** — self-improving AI agent, learning loop, skills from experience.
 - **[t8y2/dbx](https://github.com/t8y2/dbx)** — database desktop tool, deployment via Docker Compose.
 - **[oblien/openship](https://github.com/oblien/openship)** — deployment platform.
+- **[tonyminibot/Vikey](https://github.com/tonyminibot/Vikey)** — Vietnamese input method for macOS; merged PR #31 adds excluded apps (remote desktop clients) and a per-app auto switch toggle.
 
 Also maintain an independent patch of **[9router](https://github.com/KGBRecord/9router)** — not merged upstream, lives in my own **[KGBRecord](https://github.com/KGBRecord)** org for anyone who wants to pull it directly.
 
