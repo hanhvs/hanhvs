@@ -6,6 +6,8 @@
 
 <sub><i>Je croyais en la lumière, jusqu'à ce qu'elle me brûle.</i></sub>
 
+</div>
+
 ## Open source
 
 Contributions and forks I actively maintain outside my own orgs:
@@ -26,3 +28,4 @@ Also maintain an independent patch of **[9router](https://github.com/KGBRecord/9
 *Not written to be done. Written to be right, then made beautiful.*
 
 </div>
+
