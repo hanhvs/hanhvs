@@ -89,6 +89,10 @@ and start being a product.
 — a Vietnamese input method for macOS. Merged a patch so Vikey leaves remote
 desktop apps untouched, plus a per-app auto switch toggle.
 
+**[getgantry/gantry](https://github.com/getgantry/gantry)**
+— a native macOS app for Docker and apple/container, local and over SSH, with a
+built-in MCP server so agents can drive your hosts too.
+
 And a patch of **[9router](https://github.com/KGBRecord/9router)** that never
 made it upstream — not because it was rejected, but because it deserved its
 own home. It lives in **[KGBRecord](https://github.com/KGBRecord)**, unlocked,
