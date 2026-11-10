@@ -402,6 +402,12 @@ a{color:inherit;text-decoration:none}a:focus-visible{outline:2px solid var(--ink
 .accordion-tags span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
 
 /* capabilities floating list */
+.repo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0;margin-top:40px;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.repo-link{display:flex;flex-direction:column;gap:10px;padding:28px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:background .25s,transform .3s}
+.repo-link:hover{background:rgba(var(--line-rgb),.05);transform:translateY(-2px)}
+.repo-link strong{font-weight:500;font-size:18px;letter-spacing:-.01em;word-break:break-all}
+.repo-link p{font-size:14px;line-height:1.55;color:var(--muted)}
+.repo-tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .cap-list{display:flex;flex-direction:column;gap:0;margin-top:40px}
 .cap-row{display:flex;align-items:center;gap:24px;padding:28px 0;border-bottom:1px solid var(--line);font-size:18px;transition:transform .3s,color .3s;cursor:pointer}
 .cap-row:hover{color:var(--muted);transform:translateX(12px)}
@@ -780,6 +786,14 @@ a{color:inherit;text-decoration:none}a:focus-visible{outline:2px solid var(--ink
         <h3 data-od-id="path-5-5-1-1-1">26 AI engineering labs.</h3>
         <p>Hands-on work across alignment, LLM fine-tuning, memory systems, RAG evaluation, deployment, guardrails, multi-agent MCP, and data foundations.</p>
       </article>
+    </div>
+    <div class="repo-grid reveal stagger-2" data-od-id="repo-grid">
+      <a class="repo-link" href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener" data-od-id="repo-hermes-agent"><span class="repo-tag">Submitted PRs</span><strong>NousResearch/hermes-agent</strong><p>Self-improving AI agent with a learning loop; skills derived from experience.</p></a>
+      <a class="repo-link" href="https://github.com/t8y2/dbx" target="_blank" rel="noopener" data-od-id="repo-dbx"><span class="repo-tag">8 merged PRs</span><strong>t8y2/dbx</strong><p>Desktop database client, deployable via Docker Compose.</p></a>
+      <a class="repo-link" href="https://github.com/oblien/openship" target="_blank" rel="noopener" data-od-id="repo-openship"><span class="repo-tag">Submitted PRs</span><strong>oblien/openship</strong><p>Deployment platform.</p></a>
+      <a class="repo-link" href="https://github.com/tonyminibot/Vikey" target="_blank" rel="noopener" data-od-id="repo-vikey"><span class="repo-tag">Merged PR #31</span><strong>tonyminibot/Vikey</strong><p>Vietnamese input method for macOS.</p></a>
+      <a class="repo-link" href="https://github.com/getgantry/gantry" target="_blank" rel="noopener" data-od-id="repo-gantry"><span class="repo-tag">Submitted PRs</span><strong>getgantry/gantry</strong><p>Native macOS app for Docker and apple/container, local or over SSH, with a built-in MCP server for AI agents.</p></a>
+      <a class="repo-link" href="https://github.com/KGBRecord/9router" target="_blank" rel="noopener" data-od-id="repo-9router"><span class="repo-tag">Own patch</span><strong>KGBRecord/9router</strong><p>Independent patch of 9router, an AI routing proxy. Not merged upstream; pull it directly.</p></a>
     </div>
   </section>
 
